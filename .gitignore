@@ -138,6 +138,12 @@ dmypy.json
 # Cython debug symbols
 cython_debug/
 
+.DS_Store
+
+
+# VS Code
+.vscode
+
 # Folders to ignore
 models
 data
