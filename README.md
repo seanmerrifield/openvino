@@ -7,7 +7,7 @@ A repo for doing edge computing demonstrations using [Intel's Openvino Toolkit](
 In order to run code in this repository you will need:
 
 - Python 3.6 or 3.7 (Currently 3.8 and above is not supported by Intel)
-- [Intel OpenVino Toolkit](https://software.intel.com/content/www/us/en/develop/tools/openvino-toolkit.html)
+- [Intel OpenVino Toolkit 2021](https://software.intel.com/content/www/us/en/develop/tools/openvino-toolkit.html)
 
 Install project dependencies via `pip`:
 
@@ -40,6 +40,3 @@ python3 ./downloader.py --name human-pose-estimation-0001 --precisions FP16,FP16
 ```
 
 Where `<MODEL_DIR>` is the full path to where the pre-trained model should be downloaded. 
-
-
-

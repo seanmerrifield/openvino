@@ -25,3 +25,23 @@ The Intel Openvino Model Downloader tool is used to download all the required pr
 ```
 
 ## 2. Run the Inference
+
+### Vehicle Detection
+
+```sh
+# From this Openvino repo
+python ./03_Inference/app.py -m <MODEL_FILE> -i <INPUT_FILE> -o <OUTPUT_FILE> 
+```
+
+- `<MODEL_FILE>` is the path to the model XML file that was downloaded in the previous step
+- `<INPUT_FILE>` is the path to the input mp4 video file where a vehicles are in the video.
+- `<OUTPUT_FILE>` is the path to the output mp4 video file that the output will be saved to.
+
+### Human Pose Estimation
+
+```sh
+# From this Openvino repo
+python ./03_Inference/app.py -m <MODEL_FILE>
+```
+
+- `<MODEL_FILE>` is the path to the model XML file that was downloaded in the previous step

@@ -3,13 +3,9 @@ import cv2
 from sys import platform
 from pathlib import Path
 
-from inference import Network
-from helpers import preprocessing, create_output_image
+from inference import Inference
+from helpers import preprocessing
 
-
-
-INPUT_STREAM = str(Path(__file__).parent / "data" / "test_video.mp4")
-OUTPUT_STREAM = str(Path(__file__).parent / "outputs" / "out.mp4")
 
 # Get correct CPU extension
 if platform == "linux" or platform == "linux2":
@@ -28,14 +24,16 @@ def get_args():
     '''
     parser = argparse.ArgumentParser("Run inference on an input video")
     # -- Create the descriptions for the commands
+    t_desc = "The model type"
     m_desc = "The location of the model XML file"
     i_desc = "The location of the input file"
+    o_desc = "The location of the output file"
     d_desc = "The device name, if not 'CPU'"
 
     ### TODO: Add additional arguments and descriptions for:
     ###       1) Different confidence thresholds used to draw bounding boxes
     ###       2) The user choosing the color of the bounding boxes
-    t_desc = "The confidence threshold for drawing bounding boxes"
+    l_desc = "The confidence threshold for drawing bounding boxes"
     c_desc = "The color of the bounding boxes"
 
 
@@ -45,10 +43,12 @@ def get_args():
     optional = parser.add_argument_group('optional arguments')
 
     # -- Create the arguments
+    required.add_argument("-t", help=t_desc, required=True)
     required.add_argument("-m", help=m_desc, required=True)
-    optional.add_argument("-i", help=i_desc, default=INPUT_STREAM)
+    optional.add_argument("-i", help=i_desc, default=None)
+    optional.add_argument("-o", help=i_desc, default=None)
     optional.add_argument("-d", help=d_desc, default='CPU')
-    optional.add_argument("-t", help=t_desc, default=0.5)
+    optional.add_argument("-l", help=l_desc, default=0.5)
     optional.add_argument("-c", help=c_desc, default="green")
     args = parser.parse_args()
 
@@ -56,16 +56,24 @@ def get_args():
 
 
 def infer_on_video(args):
-    ### TODO: Initialize the Inference Engine
-    net = Network()
+    ### TODO: Initialize the Inference Engine based on the model type
+    inference = Inference()
+    net = inference.get_network(args.t)
 
     ### TODO: Load the network model into the IE
     ### CPU extension is not needed if Openvino 2020+ is used
     net.load_model(args.m, args.d, cpu_extension=None)
 
     # Get and open video capture
-    cap = cv2.VideoCapture(args.i)
-    cap.open(args.i)
+    if args.i is None:
+        cap = cv2.VideoCapture(0)
+        if not cap.isOpened():
+            print("Cannot open camera")
+            return
+    else:
+        cap = cv2.VideoCapture(args.i)
+        cap.open(args.i)
+
 
     # Grab the shape of the input 
     width = int(cap.get(3))
@@ -74,15 +82,15 @@ def infer_on_video(args):
     # Create a video writer for the output video
     # The second argument should be `cv2.VideoWriter_fourcc('M','J','P','G')`
     # on Mac, and `0x00000021` on Linux
-    out = cv2.VideoWriter(OUTPUT_STREAM, CODEC, 30, (width,height))
-    
+    if args.o is not None:
+        out = cv2.VideoWriter(args.o, CODEC, 12, (width,height))
+        
     # Process frames until the video ends, or process is exited
     while cap.isOpened():
         # Read the next frame
         flag, frame = cap.read()
         if not flag:
             break
-        key_pressed = cv2.waitKey(60)
 
         ### TODO: Pre-process the frame
         input_shape = net.get_input_shape()
@@ -100,19 +108,26 @@ def infer_on_video(args):
         output = net.extract_output()
 
         ### TODO: Update the frame to include detected bounding boxes
-        frame = create_output_image(frame, output, color=args.c, threshold=args.t)
+        frame = net.postprocess_output(frame, output)
+
 
         # Write out the frame
-        out.write(frame)
+        if args.o is not None:
+            out.write(frame)
 
         # Display the resulting frame
         cv2.imshow('Frame', frame)
+
+        key_pressed = cv2.waitKey(60)
+
         # Break if escape key pressed
         if key_pressed == 27:
             break
 
     # Release the out writer, capture, and destroy any OpenCV windows
-    out.release()
+    if args.o is not None:
+        out.release()
+
     cap.release()
     cv2.destroyAllWindows()
 
