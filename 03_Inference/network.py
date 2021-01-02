@@ -146,6 +146,32 @@ class VehicleDetection(Network):
 
 class HumanPose(Network):
 
+    THRESHOLD = 0.5
+
+    CLASSES = ["nose", "eye", "eye", "ear", "ear", "shoulder", "shoulder", "elbow", "elbow", "wrist", "wrist", "hip", "hip", "knee", "knee", "ankle", "ankle"]
+
+    COLORS = [
+                "#e41a1c",
+                "#377eb8",
+                "#377eb8",
+                "#4daf4a",
+                "#4daf4a",
+                "#984ea3",
+                "#984ea3",
+                "#ff7f00",
+                "#ff7f00",
+                "#ffff33",
+                "#ffff33",
+                "#a65628",
+                "#a65628",
+                "#f781bf",
+                "#f781bf",
+                "#999999",
+                "#999999",
+                            ]
+
+
+
     def __init__(self):
         super().__init__()
 
@@ -174,6 +200,9 @@ class HumanPose(Network):
             [type]: [description]
         """
 
+        image = np.copy(image)
+
+
         # Remove final part of output not used for heatmaps
         # Shape (b, n, hi, wi)
         output = output.squeeze()
@@ -195,26 +224,38 @@ class HumanPose(Network):
         # Remove final part of output not used for heatmaps
         output = output[:-1]
 
-        # For each class, if confidence threshold set value at locations where confidence > 0.5
+        # For each class, if confidence threshold set value at locations where confidence exceeds threshold
         for c in range(len(output)):
-            output[c] = np.where(output[c]>0.5, 255, 0)
+            output[c] = np.where(output[c] > self.THRESHOLD, 255, 0)
 
         
         # Sum along the "class" axis
         # Shape (h, w)
-        output = np.sum(output, axis=0)
-        #output = output[0]
+        for c in range(len(output)):
+            image = self.add_point(image, c, output[c])
 
-        # Get semantic mask
-        # Shape (h, w, c)
-        pose_mask = self.get_mask(output)
-
-        # Combine with original image
-        # Shape (h, w, c)
-        image = cv2.add(image, pose_mask)
+        # Ensure maximum channel values are capped at 255
         image = np.where(image > 255, 255, image)
         return image
 
+    def add_point(self, image, cls, output):
+
+        # idx is a tuple of x, y coordinates where detection was found
+        idxs = np.where(output == 255)
+
+        # Get middle point
+        n = len(idxs[0])
+
+        if n == 0: return image
+
+        x, y = sorted(idxs[0])[int(n/2)], sorted(idxs[1])[int(n/2)]
+
+        color = self.COLORS[cls]
+        color = color.lstrip('#')
+        color = tuple(int(color[i:i+2], 16) for i in (0, 2, 4))
+
+        return cv2.circle(image, (y,x), radius=5, color=color, thickness=-1)
+        
 
     def get_mask(self, processed_output):
         '''
